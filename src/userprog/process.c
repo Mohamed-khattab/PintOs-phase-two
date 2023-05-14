@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+//#include "userprog/syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -37,10 +39,26 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-  /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+/*start modified code*/
+  char * temp = malloc(sizeof(char) * strlen(file_name) +1);
+  strlcpy(temp , file_name , strlen(file_name) +1 );
+  char* args_temp = temp;
+  char* exe_args = strtok_r(args_temp , "" , &args_temp);
+
+
+  /*new thread to excute file*/
+  tid = thread_create(exe_args , PRI_DEFAULT , start_process , fn_copy);
+  free(temp);
+  if(tid == TID_ERROR){
+    palloc_free_page(fn_copy);
+  }else{
+    sema_down(&(thread_current()->child_sema));
+    if(thread_current()->child_creation == true){
+      thread_current()->child_creation = false;
+    }else{
+      return -1;
+    }
+  }
   return tid;
 }
 
@@ -70,8 +88,22 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+  /*modified start*/
+  if (success){
+    thread_current()->child_creation = true;
+    struct child_process process;
+    process.pid = thread_current()->tid;
+    process.t = thread_current();
+    thread_current()->parent->child_status = thread_current()->status;
+    list_push_back(&(thread_current()->parent->children) , &(process.elem));
+    sema_up(&(thread_current()->parent->child_sema));
+    sema_down(&(thread_current()->child_sema));
+  }else{
+    sema_up(&(thread_current()->parent->child_sema));
+    thread_exit();
+  }
+
+    /*modified end*/
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -108,8 +140,15 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+
+     if(thread_current()->exe_file != NULL){
+      lock_acquire(&(files_lock));
+      file_close(thread_current()->exe_file);
+      lock_release(&(files_lock));
+     }
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -231,7 +270,24 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  /* Open executable file. */
+  /*modified start*/
+  char * temp = malloc(sizeof(char) * strlen(file_name) +1);
+  strlcpy(temp , file_name , strlen(file_name) +1 );
+  char* args_temp = temp;
+  char* exe_args = strtok_r(args_temp , "" , &args_temp);
+  lock_acquire(&(files_lock));
+  /*open file*/
+  file = filesys_open(exe_args);
+  if(file != NULL){
+    file_deny_write(file);
+  }else{
+    file_close(file);
+  }
+  lock_release(&(files_lock));
+  t->exe_file = file;
+  free(temp);
+  /*modified end*/
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
