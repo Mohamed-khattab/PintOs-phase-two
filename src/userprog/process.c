@@ -140,8 +140,15 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+
+     if(thread_current()->exe_file != NULL){
+      lock_acquire(&(files_lock));
+      file_close(thread_current()->exe_file);
+      lock_release(&(files_lock));
+     }
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -263,7 +270,24 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  /* Open executable file. */
+  /*modified start*/
+  char * temp = malloc(sizeof(char) * strlen(file_name) +1);
+  strlcpy(temp , file_name , strlen(file_name) +1 );
+  char* args_temp = temp;
+  char* exe_args = strtok_r(args_temp , "" , &args_temp);
+  lock_acquire(&(files_lock));
+  /*open file*/
+  file = filesys_open(exe_args);
+  if(file != NULL){
+    file_deny_write(file);
+  }else{
+    file_close(file);
+  }
+  lock_release(&(files_lock));
+  t->exe_file = file;
+  free(temp);
+  /*modified end*/
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);

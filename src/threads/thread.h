@@ -104,7 +104,7 @@ struct semaphore child_sema;
 int child_creation;
 int child_status;
 struct list children;
-
+struct file* exe_file ;
 /*modified*/
   /*alarm*/
    uint64_t sleepingTime;      /*sleeping time of thread*/
@@ -112,7 +112,6 @@ struct list children;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
 /*modified struct for processes */
 struct child_process{
    tid_t pid;
