@@ -4,8 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "synch.h"
-
+#include "threads/synch.h"
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -94,42 +93,48 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+// #ifdef USERPROG
+    /* Owned by userprog/process.c. */
+    uint32_t *pagedir;                  /* Page directory. */
+// #endif
+
     int exit_status; //ADDED. will be used to the save the exit status of a thread
 
-//#ifdef USERPROG
-    /* Owned by userprog/process.c. */
-  //  uint32_t *pagedir;                  /* Page directory. */
-//#endif
-   uint32_t *pagedir; 
-/*modified*/
-
-
-   /*modified for user programm*/
-   struct thread* parent;   //pointer to struct thread for parent process to fork child
-   struct semaphore child_sema;
-   int child_creation;
-   int child_status;
-   struct list children;
-
-   //file manipulation
+   //file manipulation ali 
    struct list file_list; //each thread will have its own list of open files
    int fd;  
 
    struct list lock_list; //keep track of locks owned by a thread
 
+/*modified for user programm*/
+struct thread* parent;   //pointer to struct thread for parent process to fork child
+int child_creation;
+int child_status;
 
+struct child_process *chld_proc ; 
+
+struct list children;    /* List of wait_status's of children. */
+struct semaphore child_sema;
+
+struct file* exe_file ;
+/*modified*/
   /*alarm*/
    uint64_t sleepingTime;      /*sleeping time of thread*/
    
     /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
+    unsigned magic; 
+                        /* Detects stack overflow. */
   };
-
+  
 /*modified struct for processes */
 struct child_process{
+   int ref_count;              /* Used to track state of references between parent and child */
+   struct semaphore sema;
+   struct lock lock;           /* Lock for synchronization (especially on ref_count) */
    tid_t pid;
    struct thread *t;
    struct list_elem elem;
+   int exit_code  ; 
 };
 
 /* If false (default), use round-robin scheduler.

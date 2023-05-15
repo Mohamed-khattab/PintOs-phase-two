@@ -18,7 +18,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
-
+//#include "userprog/syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -27,12 +27,16 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
+
+
+
+
+
 tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
   tid_t tid;
-
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -45,6 +49,7 @@ process_execute (const char *file_name)
   strlcpy(temp , file_name , strlen(file_name) +1 );
   char* args_temp = temp;
   char* exe_args = strtok_r(args_temp , "" , &args_temp);
+
 
   /*new thread to excute file*/
   tid = thread_create(exe_args , PRI_DEFAULT , start_process , fn_copy);
@@ -70,7 +75,6 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-
   thread_current()->fd = 2; //ADDED. 0 and 1 are reserved for STDIN, STDOUT
 
   /* Initialize interrupt frame and load executable. */
@@ -79,6 +83,14 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
+
+
+
+
+
+// setupu the stack  
+
+
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -118,12 +130,55 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
+
+
+
+
+   /*
+    JUST EXPLANATIONS 
+   func one {
+
+    return status 
+   }
+
+   func two(  ) {
+        status = one() ;
+
+        validate 
+
+        return -1 if null 
+
+        return thread_exit if not 
+
+
+   }
+   
+   
+   */
+
 int
-process_wait (tid_t child_tid UNUSED) //MODIFY
+process_wait (tid_t child_tid UNUSED) 
 {
-  while(1){
-    thread_yield();
-  }
+    struct  thread * curr_thread = thread_current() ;
+    struct child_process * child_status  ;
+    struct list_elem  *curr_thread_begin = list_begin(&curr_thread->children) ;
+    struct list_elem  *curr_thread_last  = list_end(&curr_thread->children) ;
+    while (curr_thread_begin != curr_thread_last)
+    {
+      struct child_process * child_status  = list_entry(curr_thread_begin ,  struct child_process , elem  );
+      curr_thread_begin = list_next(curr_thread_begin) ; // iterate
+      if(child_status->pid ==  child_tid){
+        break; // return status 
+      }
+      child_status =NULL ;
+    }
+     int exit_code = -1 ; 
+    if(child_status ==NULL )
+      return exit_code ; 
+
+    sema_down(&child_status->sema); 
+    list_remove(&child_status->elem); // remove if exit
+     return exit_code ; 
 }
 
 /* Free the current process's resources. */
@@ -131,10 +186,17 @@ void
 process_exit (void)
 {
   struct thread *cur = thread_current ();
+
   uint32_t *pd;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+
+     if(thread_current()->exe_file != NULL){
+      lock_acquire(&(files_lock));
+      file_close(thread_current()->exe_file);
+      lock_release(&(files_lock));
+     }
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -149,8 +211,15 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+      /* wait sema ; */
+      if(cur->chld_proc !=NULL ){
+        sema_up(&cur->chld_proc->sema) ;
+        lock_acquire (&cur->chld_proc->lock);
+        // cur->chld_proc->ref_count -= 1;
+        // int ref_count = cur->chld_proc->ref_count;
+        lock_release (&cur->chld_proc->lock);
+      }
 }
-
 /* Sets up the CPU for running user code in the current
    thread.
    This function is called on every context switch. */
@@ -257,7 +326,24 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  /* Open executable file. */
+  /*modified start*/
+  char * temp = malloc(sizeof(char) * strlen(file_name) +1);
+  strlcpy(temp , file_name , strlen(file_name) +1 );
+  char* args_temp = temp;
+  char* exe_args = strtok_r(args_temp , "" , &args_temp);
+  lock_acquire(&(files_lock));
+  /*open file*/
+  file = filesys_open(exe_args);
+  if(file != NULL){
+    file_deny_write(file);
+  }else{
+    file_close(file);
+  }
+  lock_release(&(files_lock));
+  t->exe_file = file;
+  free(temp);
+  /*modified end*/
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);

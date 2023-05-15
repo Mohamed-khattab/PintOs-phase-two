@@ -11,6 +11,10 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/thread.h"
+
+//#include "filesys/filesys.h"
+//#include "filesys/file.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -463,6 +467,20 @@ is_thread (struct thread *t)
 
 /* Does basic initialization of T as a blocked thread named
    NAME. */
+
+/* Added by khattab */
+/* edit start */
+void init_child_process(struct child_process *chld_proc , tid_t tid){
+
+  chld_proc->pid = tid ; 
+  chld_proc->exit_code = NULL ; 
+  sema_init(&chld_proc->sema , 0);
+  lock_init(&chld_proc->lock);
+}
+
+
+/*edit end */
+
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
@@ -471,7 +489,6 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
@@ -479,13 +496,21 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+/*edit start khattab*/
+
+// to initilize the function child process
+init_child_process(&t->chld_proc , t->tid) ;
+
+
+/*edit end */
+
+
   /*modified start*/
   list_init(&(t->children));
-  sema_init(&(t->child_sema) , 0);
+  sema_init(&t->child_sema , 0);
   t->child_creation = 0;
   t->child_status = -1;
   /*modified end*/
-  
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
