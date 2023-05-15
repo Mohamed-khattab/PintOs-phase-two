@@ -23,5 +23,5 @@ struct file *filesys_open (const char *name);
 bool filesys_remove (const char *name);
 
 
-static struct lock file_sys_lock; 
+struct lock file_sys_lock; 
 #endif /* filesys/filesys.h */
