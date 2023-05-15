@@ -27,6 +27,11 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
+
+
+
+
+
 tid_t
 process_execute (const char *file_name) 
 {
@@ -124,14 +129,55 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
+
+
+
+
+   /*
+    JUST EXPLANATIONS 
+   func one {
+
+    return status 
+   }
+
+   func two(  ) {
+        status = one() ;
+
+        validate 
+
+        return -1 if null 
+
+        return thread_exit if not 
+
+
+   }
+   
+   
+   */
+
 int
 process_wait (tid_t child_tid UNUSED) 
-
 {
-    while(true)
+    struct  thread * curr_thread = thread_current() ;
+    struct child_process * child_status  ;
+    struct list_elem  *curr_thread_begin = list_begin(&curr_thread->children) ;
+    struct list_elem  *curr_thread_last  = list_end(&curr_thread->children) ;
+    while (curr_thread_begin != curr_thread_last)
     {
-        thread_yield();
+      struct child_process * child_status  = list_entry(curr_thread_begin ,  struct child_process , elem  );
+      curr_thread_begin = list_next(curr_thread_begin) ; // iterate
+      if(child_status->pid ==  child_tid){
+        break; // return status 
+      }
+      child_status =NULL ;
     }
+     int exit_code = -1 ; 
+    if(child_status ==NULL )
+      return exit_code ; 
+
+    sema_down(&child_status->sema); 
+    list_remove(&child_status->elem); // remove if exit
+     return exit_code ; 
 }
 
 /* Free the current process's resources. */
@@ -139,6 +185,7 @@ void
 process_exit (void)
 {
   struct thread *cur = thread_current ();
+
   uint32_t *pd;
 
   /* Destroy the current process's page directory and switch back
@@ -163,6 +210,14 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+      /* wait sema ; */
+      if(cur->chld_proc !=NULL ){
+        sema_up(&cur->chld_proc->sema) ;
+        lock_acquire (&cur->chld_proc->lock);
+        // cur->chld_proc->ref_count -= 1;
+        // int ref_count = cur->chld_proc->ref_count;
+        lock_release (&cur->chld_proc->lock);
+      }
 }
 /* Sets up the CPU for running user code in the current
    thread.

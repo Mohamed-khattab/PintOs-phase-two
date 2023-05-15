@@ -100,23 +100,33 @@ struct thread
 
 /*modified for user programm*/
 struct thread* parent;   //pointer to struct thread for parent process to fork child
-struct semaphore child_sema;
 int child_creation;
 int child_status;
-struct list children;
+
+struct child_process *chld_proc ; 
+
+struct list children;    /* List of wait_status's of children. */
+struct semaphore child_sema;
+
 struct file* exe_file ;
 /*modified*/
   /*alarm*/
    uint64_t sleepingTime;      /*sleeping time of thread*/
    
     /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
+    unsigned magic; 
+                        /* Detects stack overflow. */
   };
+  
 /*modified struct for processes */
 struct child_process{
+   int ref_count;              /* Used to track state of references between parent and child */
+   struct semaphore sema;
+   struct lock lock;           /* Lock for synchronization (especially on ref_count) */
    tid_t pid;
    struct thread *t;
    struct list_elem elem;
+   int exit_code  ; 
 };
 
 /* If false (default), use round-robin scheduler.
