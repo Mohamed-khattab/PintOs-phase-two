@@ -19,7 +19,7 @@ void
 filesys_init (bool format) 
 {
   /*init the files lock*/
-  lock_init(&(files_lock));
+  lock_init(&(file_sys_lock));
   
   fs_device = block_get_role (BLOCK_FILESYS);
   if (fs_device == NULL)

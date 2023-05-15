@@ -193,9 +193,9 @@ process_exit (void)
      to the kernel-only page directory. */
 
      if(thread_current()->exe_file != NULL){
-      lock_acquire(&(files_lock));
+      lock_acquire(&(file_sys_lock));
       file_close(thread_current()->exe_file);
-      lock_release(&(files_lock));
+      lock_release(&(file_sys_lock));
      }
   pd = cur->pagedir;
   if (pd != NULL) 
@@ -332,7 +332,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   strlcpy(temp , file_name , strlen(file_name) +1 );
   char* args_temp = temp;
   char* exe_args = strtok_r(args_temp , "" , &args_temp);
-  lock_acquire(&(files_lock));
+  lock_acquire(&(file_sys_lock));
   /*open file*/
   file = filesys_open(exe_args);
   if(file != NULL){
@@ -340,7 +340,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   }else{
     file_close(file);
   }
-  lock_release(&(files_lock));
+  lock_release(&(file_sys_lock));
   t->exe_file = file;
   free(temp);
   /*modified end*/

@@ -13,7 +13,7 @@
 extern struct block *fs_device;
 
 /*start modified*/
-struct lock files_lock;
+//static struct lock files_lock;
 /*end modified*/
 
 void filesys_init (bool format);
