@@ -4,7 +4,6 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/synch.h"
-
 #include "devices/shutdown.h"   //ADDED
 #include "filesys/filesys.h" //ADDED
 #include "lib/user/syscall.c" //ADDED
@@ -12,6 +11,7 @@
 #include "filesys/file.h" // For write function
 #include "threads/malloc.h" //to support the use of free()
 #include "devices/input.c" //to use input_getc()
+#include "filesys/filesys.h" 
 
 #define MAX_ARGS 3
 
