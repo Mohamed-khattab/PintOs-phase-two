@@ -10,7 +10,7 @@
 #include "threads/vaddr.h" //ADDED
 #include "filesys/file.h" // For write function
 #include "threads/malloc.h" //to support the use of free()
-#include "devices/input.c" //to use input_getc()
+//#include "devices/input.c" //to use input_getc()
 #include "filesys/filesys.h" 
 
 #define MAX_ARGS 3
