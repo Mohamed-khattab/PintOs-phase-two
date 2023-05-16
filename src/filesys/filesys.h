@@ -23,9 +23,5 @@ struct file *filesys_open (const char *name);
 bool filesys_remove (const char *name);
 
 
-<<<<<<< HEAD
- static struct lock file_sys_lock; 
-=======
 static struct lock file_sys_lock; 
->>>>>>> parent of be40ea7 (Merge pull request #4 from AbdelrhmanJaber/main)
 #endif /* filesys/filesys.h */
