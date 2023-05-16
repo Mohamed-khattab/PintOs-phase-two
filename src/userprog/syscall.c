@@ -40,6 +40,17 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+/*modified start*/
+tid_t
+SYS_EXEC_WRAPPER (void **esp)
+{
+  validate_void_ptr (*esp + 4);
+  char *char_ptr = get_char_ptr (&esp);
+  validate_void_ptr (char_ptr);
+  return exec (char_ptr);
+}
+/*modified end*/
+
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
@@ -60,6 +71,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_EXEC: //SYS_EXEC
+      f->eax = SYS_EXEC_WRAPPER (&f->esp);
       break;
 
     case SYS_WAIT: //SYS_WAIT
