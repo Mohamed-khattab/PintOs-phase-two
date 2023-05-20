@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "filesys/file.h"
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -23,6 +25,12 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+
+struct open_file{
+   int fd;
+   struct file* ptr;
+   struct list_elem elem;
+};
 
 /* A kernel thread or user process.
 
@@ -92,57 +100,36 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    
+    /* Start pintos part 2. */
 
-// #ifdef USERPROG
+    struct list open_file_list;          // list of opened files
+    struct list child_processe_list;	 // list of child of the process
+    struct thread* parent_thread;        // parent of the process
+    bool is_child_creation_success;
+    int child_status;
+    struct file* executable_file;
+    struct semaphore wait_child_sema;
+    struct semaphore parent_child_sync_sema;
+    int fd_last;
+    struct list_elem child_elem;
+
+    /* End pintos part 2. */
+
+#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-// #endif
+#endif
 
-    int exit_status; //ADDED. will be used to the save the exit status of a thread
-
-   //file manipulation ali 
-   struct list file_list; //each thread will have its own list of open files
-   int fd;  
-
-   struct list lock_list; //keep track of locks owned by a thread
-
-/*modified for user programm*/
-struct thread* parent;   //pointer to struct thread for parent process to fork child
-int child_creation;
-int child_status;
-
-struct child_process *chld_proc ; 
-
-struct list children;    /* List of wait_status's of children. */
-struct semaphore child_sema;
-
-struct file* exe_file ;
-/*modified*/
-  /*alarm*/
-   uint64_t sleepingTime;      /*sleeping time of thread*/
-   
     /* Owned by thread.c. */
-    unsigned magic; 
-                        /* Detects stack overflow. */
+    unsigned magic;                     /* Detects stack overflow. */
   };
-  
-/*modified struct for processes */
-struct child_process{
-   int ref_count;              /* Used to track state of references between parent and child */
-   struct semaphore sema;
-   struct lock lock;           /* Lock for synchronization (especially on ref_count) */
-   tid_t pid;
-   struct thread *t;
-   struct list_elem elem;
-   int exit_code  ; 
-};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-/*modified*/
-void wake_up_sleeping_thread(struct thread *t, void *aux);
+
 void thread_init (void);
 void thread_start (void);
 
