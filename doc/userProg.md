@@ -18,6 +18,7 @@
 - A3: Why does Pintos implement strtok_r() but not strtok()?
 - A4: In Pintos, the kernel separates commands into an executable name and arguments. In Unix-like systems, the shell does this separation. Identify at least two advantages of the Unix approach.
 
+
 ## SYSTEM CALLS
 
 ### DATA STRUCTURES
@@ -167,6 +168,18 @@ void process_exit(void)
 ### B7: The "exec" system call returns -1 if loading the new executable fails, so it cannot return before the new executable has completed loading. How does your code ensure this? How is the load success/failure status passed back to the thread that calls "exec"?
 
 ### B8: Consider parent process P with child process C. How do you ensure proper synchronization and avoid race conditions when P calls wait(C) before C exits? After C exits? How do you ensure that all resources are freed in each case? How about when P terminates without waiting, before C exits? After C exits? Are there any special cases?
+
+## File Operation Syscalls
+
+##### process.c
+##### syscall.c
+##### thread.h
+##### process.h
+
+###  Algorithms
+put the function u implemented here create , remove , open .....
+
+
 
 ## RATIONALE
 ### B9: Why did you choose to implement access to user memory from the kernel in the way that you did?
