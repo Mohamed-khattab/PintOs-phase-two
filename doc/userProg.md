@@ -91,7 +91,52 @@ There is room for improvement in these numbers by employing techniques such as d
 
 #### exec :
 
-// youmna part 
+In the process_execute function:
+
+ - It begins by declaring several variables: fn_copy, name, next, and tid. These variables are used to store information and control the execution flow.
+ - The function then allocates a page of memory using the palloc_get_page function to store a copy of the file_name parameter. This is done to prevent a race condition between the caller and the load() function, which loads the program into memory.
+ - Next, it allocates another page of memory to store the file name itself using palloc_get_page. If either of these allocations fails, the previously allocated pages are freed, and the function returns TID_ERROR to indicate failure.
+ - The strlcpy function is called to copy the file_name parameter into fn_copy. This is done to ensure that the original file_name is not modified by any concurrent operations.
+ - The function then extracts the executable name from the file_name by using strtok_r. It tokenizes the string using a space (" ") as the delimiter. The first token, which is the executable name, is stored in the name variable.
+ - Now, a new thread is created using thread_create. It passes the name (executable name), PRI_DEFAULT (default priority), start_process (entry point of the program), and fn_copy (a copy of the file name) as arguments. The return value, which is the thread ID (tid), is stored in the tid variable.
+ - If the thread creation fails (tid is TID_ERROR), the allocated memory is freed, and TID_ERROR is returned.
+ - The sema_down function is used to synchronize the parent and child threads. The current thread (parent) waits until the child thread signals that it has completed its initialization. This synchronization is done using the parent_child_sync_sema semaphore associated with the current thread.
+ - After synchronization, if the name variable is not NULL, it means that memory was allocated for the name variable. In such cases, the allocated memory is freed using palloc_free_page.
+ - If the child thread creation was successful (thread_current()->is_child_creation_success is true), the function returns the thread ID (tid).
+ - If the child thread creation was not successful, the function returns TID_ERROR.
+
+ char* fn_copy;
+  char* name ; 
+  char* next ;
+  tid_t tid;
+  fn_copy = palloc_get_page (0);
+  name = palloc_get_page (0);
+  if (fn_copy == NULL || name == NULL) {
+    palloc_free_page(fn_copy);
+    palloc_free_page(name);
+    return TID_ERROR;
+  }
+  strlcpy (fn_copy, file_name, PGSIZE); // it check for null parameter in string.s 
+  strlcpy(name , file_name , PGSIZE) ; 
+  name = strtok_r(name , " " , &next ) ; 
+  tid = thread_create (name, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR)
+  {
+  	palloc_free_page(name);
+    palloc_free_page(fn_copy);
+    return TID_ERROR;
+  }
+  sema_down(&thread_current()->parent_child_sync_sema);
+  if (name)
+  {
+    palloc_free_page(name);
+  }
+  if (!thread_current()->is_child_creation_success) 
+  {
+    return TID_ERROR;
+  }
+  return tid;
+
 
 #### wait :
 
@@ -180,9 +225,39 @@ void process_exit(void)
 - B6: Any access to user program memory at a user-specified address can fail due to a bad pointer value. Such accesses must cause the process to be terminated. System calls are fraught with such accesses, e.g., a "write" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point. This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling? Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed? In a few paragraphs, describe the strategy or strategies you adopted for managing these issues. Give an example.
 
 ## SYNCHRONIZATION
-### B7: The "exec" system call returns -1 if loading the new executable fails, so it cannot return before the new executable has completed loading. How does your code ensure this? How is the load success/failure status passed back to the thread that calls "exec"?
 
-### B8: Consider parent process P with child process C. How do you ensure proper synchronization and avoid race conditions when P calls wait(C) before C exits? After C exits? How do you ensure that all resources are freed in each case? How about when P terminates without waiting, before C exits? After C exits? Are there any special cases?
+- B7: The loading of the new executable is ensured to complete before returning from the process_execute function. This is achieved through the use of synchronization and status tracking.
+
+  Synchronization: The function uses a semaphore named parent_child_sync_sema associated with the parent thread (current thread) to synchronize the parent and child threads. After creating the new thread with thread_create, the parent thread waits by calling sema_down(&thread_current()->parent_child_sync_sema). This causes the parent thread to block until the child thread signals that it has completed its initialization.
+
+  Status tracking: The thread_current()->is_child_creation_success flag is used to track the success or failure of the child thread creation. Before returning from process_execute, the function checks the value of this flag. If it is true, indicating that the child thread creation was successful, the function proceeds. Otherwise, if the flag is false, indicating that the child thread creation failed, the function returns TID_ERROR.
+  
+  By combining these synchronization and status tracking mechanisms, the code ensures that the process_execute function does not return until the new executable has completed loading. The child thread signals the completion of its initialization through the semaphore, and the success or failure status is communicated to the calling thread via the is_child_creation_success flag.
+
+- B8: When P calls wait(C) before C exits:
+        The parent process P calls process_wait with the child's thread ID (TID).
+        In process_wait, P iterates over its child process list to find the child with the matching TID.
+        If the child process is found, it is removed from the parent's child process list using list_remove.
+        The parent process then performs synchronization by calling sema_up on the child's parent_child_sync_sema, indicating that it has finished waiting for the child.
+        The parent process subsequently waits for the child process to exit by calling sema_down on its own wait_child_sema.
+        Meanwhile, the child process, in its start_process function, signals its initialization completion to the parent process by calling sema_up on the parent's parent_child_sync_sema.
+        After the child process exits, it sets its exit status in the parent's child_status variable.
+        Finally, the parent process retrieves the child's exit status from child_status and returns it.
+
+    After C exits:
+        If P calls wait(C) after C has already exited, the child process will not be found in the parent's child process list in process_wait.
+        In such cases, process_wait will return immediately with a return value of -1, indicating that the child is invalid or not a child of the calling process.
+
+    When P terminates without waiting before C exits:
+        If P terminates without waiting for C, the operating system takes over the responsibility of reaping the child process.
+        The child process becomes an orphan and is typically reassigned to a special process called the init process or assigned to another parent process.
+        The operating system ensures that all resources allocated to the terminated process, including the orphaned child process, are freed.
+
+    After C exits and P has already terminated:
+        If C exits before P terminates, and P has already exited, the operating system is responsible for cleaning up the resources associated with C.
+        The operating system ensures that all resources allocated to terminated processes are freed, even if the parent process has already exited.
+
+  In summary, the code manages synchronization between the parent and child processes using semaphores (parent_child_sync_sema, wait_child_sema). It ensures proper resource management by removing the child process from the parent's child process list and signaling the completion of waiting and child process exit. The code handles various scenarios such as waiting for the child before it exits, handling cases where P terminates without waiting, and ensuring resource cleanup by the operating system.
 
 
 ###  Algorithms
