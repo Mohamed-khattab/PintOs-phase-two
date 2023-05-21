@@ -5,11 +5,9 @@
 - FirstName LastName <email@domain.example>
 - FirstName LastName <email@domain.example>
 
-## PRELIMINARIES
-- If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
-- Please cite any offline or online sources you consulted while preparing your submission, other than the Pintos documentation, course text, lecture notes, and course staff.
 
 ## ARGUMENT PASSING
+
 ### DATA STRUCTURES
 - A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration. Identify the purpose of each in 25 words or less.
 
