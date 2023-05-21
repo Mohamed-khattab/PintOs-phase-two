@@ -2,7 +2,7 @@
 
 ## GROUP
 - Mohamed Khattab (mohamed.e.khattab.0@gmail.com)
-- FirstName LastName <email@domain.example>
+- Ali ELneklawy (es-ali.elsayed2024@alexu.edu.eg)
 - FirstName LastName <email@domain.example>
 
 
@@ -60,8 +60,23 @@ struct thread
   
 ```
 #### userprog/syscall.c
+In this file, various system calls are implemented. These system calls include reading from a file, writing from a file, removing, opening and creating files and so on. A pointer `f' which is a pointer to `struct intr_frame` is mainly used to access the stack and grab the arguemnts. The following structure was added to `struct thread`:
+```
+struct list file_list;
+int fd;
+int exit_status;
+```
+Added the follwoing struct to `syscall.h`:
+```
+struct file_desc {
+  struct file *file; // pointer to the open file
+  int fd; // file descriptor number
+  struct list_elem elem; // list element for thread's file list
+};
+```
 
 #### process.c
+In `process.c`, the file descriptor `fd` of the currently running thread was initialized to 2 since 0 and 1 are resreved for `STDIN` and `STDOUT`. 
 
 
 ### ALGORITHMS
@@ -169,12 +184,6 @@ void process_exit(void)
 
 ### B8: Consider parent process P with child process C. How do you ensure proper synchronization and avoid race conditions when P calls wait(C) before C exits? After C exits? How do you ensure that all resources are freed in each case? How about when P terminates without waiting, before C exits? After C exits? Are there any special cases?
 
-## File Operation Syscalls
-
-##### process.c
-##### syscall.c
-##### thread.h
-##### process.h
 
 ###  Algorithms
 put the function u implemented here create , remove , open .....
