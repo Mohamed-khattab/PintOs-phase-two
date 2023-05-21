@@ -58,13 +58,62 @@ struct thread
   t->fd_last = 2;
   
 ```
-##### userprog/syscall.c
+#### userprog/syscall.c
 
 #### process.c
+
+
 ### ALGORITHMS
-- B3: Describe your code for reading and writing user data from the kernel.
-- B4: Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel. What is the least and the greatest possible number of inspections of the page table (e.g., calls to pagedir_get_page()) that might result? What about for a system call that only copies 2 bytes of data? Is there room for improvement in these numbers, and how much?
-- B5: Briefly describe your implementation of the "wait" system call and how it interacts with process termination.
+#### B4:
+In the case of a system call that causes a full page (4,096 bytes) of data to be copied from user space into the kernel, the least number of inspections of the page table that might result is one. This assumes that the entire page is contiguous in the memory and mapped properly.
+
+On the other hand, the greatest possible number of inspections of the page table would be 1,024. This would occur if the page is fragmented and scattered across different locations in the memory, requiring multiple table lookups to retrieve all the necessary data.
+
+For a system call that only copies 2 bytes of data, the least number of inspections would still be one, assuming the 2-byte data is within a single page and mapped correctly.
+
+There is room for improvement in these numbers by employing techniques such as demand paging or lazy loading. These techniques allow pages to be loaded into the kernel only when they are actually accessed, rather than copying the entire page upfront. This can reduce the number of inspections of the page table and improve overall performance, especially for larger data sets.
+
+#### exec 
+
+// youmna part 
+
+#### wait 
+
+In the process_wait function:
+
+ - Waits for the child process with the given thread ID to exit.
+ - Iterates through the child processes list of the current thread.
+ - If a matching thread with the given thread ID is found, it is removed from the list.
+ - Signals the child process to wake up by calling sema_up on its parent-child synchronization semaphore.
+ - Waits for the child process to finish by calling sema_down on the parent's wait child semaphore.
+ - Returns the exit status of the child process.
+ - If no matching thread is found, returns -1.
+ ```
+struct thread* parent = thread_current();
+struct thread* child = NULL;
+for (struct list_elem* e = list_begin(&parent->child_processe_list); e != list_end(&parent->child_processe_list); e = list_next(e))
+{
+    struct thread* child_process = list_entry(e, struct thread, child_elem);
+    if (child_process->tid == child_tid)
+    {
+        child = child_process;
+        break;
+    }
+}
+if (child != NULL) {
+    list_remove(&child->child_elem);
+    sema_up(&child->parent_child_sync_sema);
+    sema_down(&parent->wait_child_sema);
+    return parent->child_status;
+}
+return -1;
+```
+
+### exit 
+
+
+
+
 - B6: Any access to user program memory at a user-specified address can fail due to a bad pointer value. Such accesses must cause the process to be terminated. System calls are fraught with such accesses, e.g., a "write" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point. This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling? Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed? In a few paragraphs, describe the strategy or strategies you adopted for managing these issues. Give an example.
 
 ## SYNCHRONIZATION
