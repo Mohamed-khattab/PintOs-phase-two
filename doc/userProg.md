@@ -19,9 +19,45 @@
 - A4: In Pintos, the kernel separates commands into an executable name and arguments. In Unix-like systems, the shell does this separation. Identify at least two advantages of the Unix approach.
 
 ## SYSTEM CALLS
+
 ### DATA STRUCTURES
-- B1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration. Identify the purpose of each in 25 words or less.
-- B2: Describe how file descriptors are associated with open files. Are file descriptors unique within the entire OS or just within a single process?
+
+#### thread.h
+```
+struct open_file{
+   int fd;
+   struct file* ptr;
+   struct list_elem elem;
+};
+
+struct thread
+  {
+    
+    struct list open_file_list;          // list of opened files
+    struct list child_processe_list;	 // list of child of the process
+    struct thread* parent_thread;        // parent of the process
+    bool is_child_creation_success;
+    int child_status;
+    struct file* executable_file;
+    struct semaphore wait_child_sema;
+    struct semaphore parent_child_sync_sema;
+    int fd_last;
+    struct list_elem child_elem;
+};
+
+```
+ #### thread.c
+```
+
+  sema_init(&t->parent_child_sync_sema,0);
+  sema_init(&t->wait_child_sema,0);
+  list_init(&t->open_file_list);
+  list_init(&t->child_processe_list);
+  t->parent_thread = running_thread();
+  t->child_status = -2;
+  t->fd_last = 2;
+  
+```
 
 ### ALGORITHMS
 - B3: Describe your code for reading and writing user data from the kernel.
