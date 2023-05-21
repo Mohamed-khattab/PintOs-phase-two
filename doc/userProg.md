@@ -73,11 +73,11 @@ For a system call that only copies 2 bytes of data, the least number of inspecti
 
 There is room for improvement in these numbers by employing techniques such as demand paging or lazy loading. These techniques allow pages to be loaded into the kernel only when they are actually accessed, rather than copying the entire page upfront. This can reduce the number of inspections of the page table and improve overall performance, especially for larger data sets.
 
-#### exec 
+#### exec :
 
 // youmna part 
 
-#### wait 
+#### wait :
 
 In the process_wait function:
 
@@ -109,9 +109,56 @@ if (child != NULL) {
 return -1;
 ```
 
-### exit 
+#### exit :
+
+ in process_exit Function
+   Frees the resources of the current process.
+
+ - Closes all open files in the current process's open file list.
+ - Frees the memory allocated for each open file structure.
+ - Notifies and releases the parent thread's synchronization semaphore for each child process.
+ - Allows write access to the executable file if it exists and closes it.
+ - Signals the parent thread by calling sema_up on its wait child semaphore if it exists.
+ - Destroys the current process's page directory, switching back to the kernel-only page directory.
+ ```
+void process_exit(void)
+{
+  struct thread *cur = thread_current();
+  uint32_t *pd;
+
+  while (!list_empty(&cur->open_file_list))
+  {
+    struct open_file *opened_file = list_entry(list_pop_back(&cur->open_file_list), struct open_file, elem);
+    file_close(opened_file->ptr);
+    palloc_free_page(opened_file);
+  }
+
+  while (!list_empty(&cur->child_processe_list))
+  {
+    struct thread *child = list_entry(list_pop_back(&cur->child_processe_list), struct thread, child_elem);
+    child->parent_thread = NULL;
+    sema_up(&child->parent_child_sync_sema);
+  }
+
+  if (cur->executable_file != NULL)
+  {
+    file_allow_write(cur->executable_file);
+    file_close(cur->executable_file);
+  }
+
+  if (cur->parent_thread != NULL)
+    sema_up(&cur->parent_thread->wait_child_sema);
+  pd = cur->pagedir;
+  if (pd != NULL)
+  {
+    cur->pagedir = NULL;
+    pagedir_activate(NULL);
+    pagedir_destroy(pd);
+  }
+}
 
 
+```
 
 
 - B6: Any access to user program memory at a user-specified address can fail due to a bad pointer value. Such accesses must cause the process to be terminated. System calls are fraught with such accesses, e.g., a "write" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point. This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling? Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed? In a few paragraphs, describe the strategy or strategies you adopted for managing these issues. Give an example.
