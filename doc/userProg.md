@@ -104,7 +104,7 @@ In the process_execute function:
  - After synchronization, if the name variable is not NULL, it means that memory was allocated for the name variable. In such cases, the allocated memory is freed using palloc_free_page.
  - If the child thread creation was successful (thread_current()->is_child_creation_success is true), the function returns the thread ID (tid).
  - If the child thread creation was not successful, the function returns TID_ERROR.
-
+```
  char* fn_copy;
   char* name ; 
   char* next ;
@@ -136,7 +136,7 @@ In the process_execute function:
     return TID_ERROR;
   }
   return tid;
-
+```
 
 #### wait :
 
