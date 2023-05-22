@@ -3,6 +3,8 @@
 ## GROUP
 - Mohamed Khattab (mohamed.e.khattab.0@gmail.com)
 - Ali ELneklawy (es-ali.elsayed2024@alexu.edu.eg)
+- Abdelrahman Ibrahim (iabdelrhman37@gmail.com)
+- Ziad Ragab Elsayed (zyad2100@gmail.com)
 - FirstName LastName <email@domain.example>
 
 
@@ -11,13 +13,69 @@
 ### DATA STRUCTURES
 - A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration. Identify the purpose of each in 25 words or less.
 
+#### thread.h
+
+struct list child_processe_list : list for all child process.
+struct thread* parent_thread : pointer to the parent process;
+int child_status : when the parent is waitingon its child process child status is updated.
+struct file* executable_file : the current file that the process executes.
+ struct semaphore wait_child_sema : the parent uses it to block itself until the child process
+finishes its execution.
+struct semaphore parent_child_sync_sema; : the parent uses it to block itself until the child
+process is loaded.
+struct list_elem child_elem : struct for the list of the process’s children.
+
+bool is_child_creation_success : to check if child created or a problem happened to communicate with other functions.
+#### thread.c
+
+init all data structures that we added into thread.h
+
+  sema_init(&t->parent_child_sync_sema,0);
+  sema_init(&t->wait_child_sema,0);
+  list_init(&t->open_file_list);
+  list_init(&t->child_processe_list);
+  t->parent_thread = running_thread();
+  t->child_status = -2;
+
+
 ### ALGORITHMS
 - A2: Briefly describe how you implemented argument parsing. How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
 
+in function
+ tid_t
+process_execute (const char *file_name) 
+
+we should parase the input and get the file name to be excuted.
+then we create a new thread to excute file name and the parent thread should sleep untill the child finished.
+parent and child have the same priority so we should make parent sleep to avoid race condition and if we want to change the priority,
+phasae 2 may pass all test but it's sure that the other tests in the rest phases will fail.
+we check if the child started successfully or not if not we should return error 
+but when this boolean variable is_child_creation_success set true or false ?
+
+in Start_Process fuction
+
+in this function we check success -that already implemented if it happened we set the boolean variable is_child_creation_success its true now.
+and we should rehandle the wake and sleep of parent and child by using 
+sema_up(&parent->parent_child_sync_sema);
+sema_down(&child->parent_child_sync_sema);
+we should wake up the parent and make child sleep 
+the parent should kill the child to avoid zombies.
+
+
 ### RATIONALE
 - A3: Why does Pintos implement strtok_r() but not strtok()?
+
+
+Strok_r() is an updated version of strok() which is safer. 
+since The reason for that is that strok() uses a global variable which is not safe as we knows to
+keep track of the string position. 
+So using strok() in multiple strings simultaneously may lead to race conditions! and we should  to avoid that.
+
+
 - A4: In Pintos, the kernel separates commands into an executable name and arguments. In Unix-like systems, the shell does this separation. Identify at least two advantages of the Unix approach.
 
+Allowing the shell to separate the commands will provide a layer of abstraction to the code because the shell is a userprogram,
+so the validation and separation are made in the user side rather than the kernel’s.
 
 ## SYSTEM CALLS
 
@@ -47,7 +105,7 @@ struct thread
 };
 
 ```
- #### thread.c
+#### thread.c
 ```
 
   sema_init(&t->parent_child_sync_sema,0);
