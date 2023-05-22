@@ -29,7 +29,7 @@ bool is_child_creation_success : to check if child created or a problem happened
 #### thread.c
 
 init all data structures that we added into thread.h
-
+```
   sema_init(&t->parent_child_sync_sema,0);
   sema_init(&t->wait_child_sema,0);
   list_init(&t->open_file_list);
@@ -37,7 +37,7 @@ init all data structures that we added into thread.h
   t->parent_thread = running_thread();
   t->child_status = -2;
 
-
+```
 ### ALGORITHMS
 - A2: Briefly describe how you implemented argument parsing. How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
 
